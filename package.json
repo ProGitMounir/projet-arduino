@@ -1,0 +1,15 @@
+{
+  "name": "projet-arduino",
+  "version": "1.0.0",
+  "description": "Ce projet utilise un Arduino Mega 2560 pour créer un système de gestion de maison intelligente. Il permet de contrôler à distance différents appareils (lumières, ventilateurs, thermostats) à partir d'une interface web.",
+  "main": "hello.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "johnny-five": "^2.1.0"
+  }
+}
