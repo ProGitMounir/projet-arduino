@@ -5,7 +5,7 @@ Ce projet utilise un Arduino Mega 2560 pour créer un système de gestion de mai
 ## 📌 Auteurs
 
 👤 **ILYASS BARKOUK** 
-📧 Contact : ``
+📧 Contact : `barkoukilyass@gmail.com` || 'ilyassBarkouk@etud.iga.ac.ma'
 
 👤 **MOUNIR IYA AMINE**  
-📧 Contact : `pro.mailmounir@gmail.com`
+📧 Contact : `pro.mailmounir@gmail.com` || 'mounir.iyaamine@etud.iga.ac.ma'
