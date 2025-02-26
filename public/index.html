@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contrôle Arduino</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin-top: 50px;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      margin: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Contrôle Arduino</h1>
+  <p>État de la LED : <strong id="ledState">Éteinte</strong></p>
+  <p>Luminosité : <strong id="lightValue">0</strong></p>
+  <p>Appuis sur le bouton : <strong id="buttonPresses">0</strong></p>
+  <button id="toggleLed">Allumer/Éteindre la LED</button>
+  <p id="codeResult"></p>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+
+    // Mettre à jour l'état de la LED
+    socket.on("ledState", (isOn) => {
+      document.getElementById("ledState").textContent = isOn ? "Allumée" : "Éteinte";
+    });
+
+    // Mettre à jour la luminosité
+    socket.on("lightData", (brightness) => {
+      document.getElementById("lightValue").textContent = brightness;
+    });
+
+    // Mettre à jour les appuis sur le bouton
+    socket.on("buttonPress", (presses) => {
+      document.getElementById("buttonPresses").textContent = presses;
+    });
+
+    // Afficher le résultat du code
+    socket.on("codeResult", (result) => {
+      document.getElementById("codeResult").textContent = result.message;
+    });
+
+    // Gérer le bouton pour allumer/éteindre la LED
+    document.getElementById("toggleLed").addEventListener("click", () => {
+      const isOn = document.getElementById("ledState").textContent === "Allumée";
+      socket.emit("toggleLed", !isOn);
+    });
+  </script>
+</body>
+</html>
