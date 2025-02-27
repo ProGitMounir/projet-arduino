@@ -12,6 +12,7 @@ const io = socketIo(server);
 const LED_PIN = 13; // LED principale
 const LED_RED_PIN = 3; // LED rouge
 const LED_GREEN_PIN = 2; // LED verte
+const LED_YELLOW_PIN = 4; // LED verte
 const LIGHT_SENSOR_PIN = "A0";
 const BUTTON_PIN = "A1";
 const LIGHT_THRESHOLD = 200;
@@ -24,6 +25,7 @@ const board = new Board();
 let led = null;
 let ledRed = null; // LED rouge
 let ledGreen = null; // LED verte
+let ledYellow = null; // LED jaune
 let lightSensor = null;
 let button = null;
 let buzzer = null; // Buzzer
@@ -49,6 +51,7 @@ board.on("ready", () => {
   led = new Led(LED_PIN);
   ledRed = new Led(LED_RED_PIN); // Initialiser la LED rouge
   ledGreen = new Led(LED_GREEN_PIN); // Initialiser la LED verte
+  ledYellow = new Led(LED_YELLOW_PIN);
   lightSensor = new Sensor({ pin: LIGHT_SENSOR_PIN, freq: 250 });
   button = new Button(BUTTON_PIN);
   buzzer = new Led(BUZZER_PIN); // Utiliser Led pour contrôler le buzzer
@@ -100,7 +103,9 @@ board.on("ready", () => {
 // Fonction pour démarrer la saisie du code
 function startCodeEntry() {
   if (isCodeBeingEntered) return;
-  ledRed.blink(500);
+  ledYellow.blink(500);
+  ledRed.stop().off();
+
   codeEntered = 0;
   isCodeBeingEntered = true;
   console.log("⏳ Vous avez 10 secondes pour entrer le code.");
@@ -111,12 +116,14 @@ function startCodeEntry() {
       led.on();
       ledGreen.on(); // Allumer la LED verte
       ledRed.stop().off();
+      ledYellow.stop().off();
       io.emit("codeResult", { success: true, message: "Code correct !" });
     } else {
       console.log("❌ Code incorrect !");
       led.blink(500); // Faire clignoter la LED principale
       ledRed.blink(100); // Faire clignoter rapidement la LED rouge
       //buzzer.pulse(500); // Joue le son d'alarme pour 500ms
+      ledYellow.stop().off();
       io.emit("codeResult", { success: false, message: "Code incorrect !" });
     }
 
@@ -134,6 +141,7 @@ function resetState() {
   led.stop().off(); // Éteindre la LED principale
   ledRed.on(); // Réallumer la LED rouge
   ledGreen.off(); // Éteindre la LED verte
+  ledYellow.stop().off();
   buzzer.stop().off(); // Éteindre le buzzer
   io.emit("ledState", led.isOn); // Mettre à jour l'état de la LED
 }
