@@ -19,40 +19,35 @@
 </head>
 <body>
   <h1>Contrôle Arduino</h1>
-  <p>État de la LED : <strong id="ledState">Éteinte</strong></p>
-  <p>Luminosité : <strong id="lightValue">0</strong></p>
+  <p>Luminosité : <strong id="brightness">0</strong></p>
   <p>Appuis sur le bouton : <strong id="buttonPresses">0</strong></p>
   <button id="toggleLed">Allumer/Éteindre la LED</button>
-  <p id="codeResult"></p>
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io();
-
-    // Mettre à jour l'état de la LED
-    socket.on("ledState", (isOn) => {
-      document.getElementById("ledState").textContent = isOn ? "Allumée" : "Éteinte";
-    });
+    let buttonPresses = 0;
 
     // Mettre à jour la luminosité
-    socket.on("lightData", (brightness) => {
-      document.getElementById("lightValue").textContent = brightness;
+    socket.on("brightness", (value) => {
+      document.getElementById("brightness").textContent = value;
     });
 
     // Mettre à jour les appuis sur le bouton
-    socket.on("buttonPress", (presses) => {
-      document.getElementById("buttonPresses").textContent = presses;
+    socket.on("buttonPress", () => {
+      buttonPresses++;
+      document.getElementById("buttonPresses").textContent = buttonPresses;
     });
 
-    // Afficher le résultat du code
-    socket.on("codeResult", (result) => {
-      document.getElementById("codeResult").textContent = result.message;
-    });
-
-    // Gérer le bouton pour allumer/éteindre la LED
+    // Contrôler la LED
     document.getElementById("toggleLed").addEventListener("click", () => {
-      const isOn = document.getElementById("ledState").textContent === "Allumée";
-      socket.emit("toggleLed", !isOn);
+      const isOn = document.getElementById("toggleLed").textContent === "Éteindre la LED";
+      fetch("/toggleLed", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ state: !isOn }),
+      });
+      document.getElementById("toggleLed").textContent = isOn ? "Allumer la LED" : "Éteindre la LED";
     });
   </script>
 </body>
