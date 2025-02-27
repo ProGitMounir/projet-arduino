@@ -122,7 +122,7 @@ function startCodeEntry() {
       console.log("❌ Code incorrect !");
       led.blink(500); // Faire clignoter la LED principale
       ledRed.blink(100); // Faire clignoter rapidement la LED rouge
-      buzzer.pulse(500); // Joue le son d'alarme pour 500ms
+      //buzzer.pulse(500); // Joue le son d'alarme pour 500ms
       ledYellow.stop().off();
       io.emit("codeResult", { success: false, message: "Code incorrect !" });
     }
