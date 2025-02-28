@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Interface Arduino</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      color: #333;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+    .status {
+      margin-bottom: 20px;
+    }
+    .status p {
+      margin: 5px 0;
+    }
+    .code-input {
+      margin-top: 20px;
+    }
+    .code-input input {
+      padding: 10px;
+      font-size: 16px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Interface Arduino</h1>
+    <div class="status">
+      <p><strong>État du code :</strong> <span id="code-status">En attente...</span></p>
+      <p><strong>Luminosité :</strong> <span id="light-value">0</span></p>
+      <p><strong>Code entré :</strong> <span id="entered-code"></span></p>
+    </div>
+    <div class="code-input">
+      <input type="text" id="code-input" placeholder="Entrez le code" disabled>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    // Connexion au serveur Socket.IO
+    const socket = io();
+
+    // Écouter les événements du serveur
+    socket.on("buttonPress", (code) => {
+      document.getElementById("entered-code").textContent = code;
+    });
+
+    socket.on("lightData", (brightness) => {
+      document.getElementById("light-value").textContent = brightness;
+    });
+
+    socket.on("codeResult", (data) => {
+      const codeStatus = document.getElementById("code-status");
+      if (data.success) {
+        codeStatus.textContent = "✅ Code correct !";
+        codeStatus.style.color = "green";
+      } else {
+        codeStatus.textContent = "❌ Code incorrect !";
+        codeStatus.style.color = "red";
+      }
+    });
+
+    socket.on("ledState", (isOn) => {
+      const codeInput = document.getElementById("code-input");
+      codeInput.disabled = !isOn;
+    });
+  </script>
+</body>
+</html>

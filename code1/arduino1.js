@@ -8,16 +8,13 @@ mqttServient.on("connect", () => {
   console.log("mqttServient connecté au broker MQTT");
   // Abonnement aux topics
   mqttServient.subscribe("Active_button", (err) => {
-    if (err) console.error("Erreur d'abonnement à Active_button :", err);
-    else console.log("Abonné au bouton");
+    if (!err) console.log("Abonné au bouton");
   });
   mqttServient.subscribe("code_correct", (err) => {
-    if (err) console.error("Erreur d'abonnement à code_correct :", err);
-    else console.log("Abonné au code_correct");
+    if (!err) console.log("Abonné au code_correct");
   });
   mqttServient.subscribe("code_incorrect", (err) => {
-    if (err) console.error("Erreur d'abonnement à code_incorrect :", err);
-    else console.log("Abonné au code_incorrect");
+    if (!err) console.log("Abonné au code_incorrect");
   });
 });
 
@@ -49,7 +46,6 @@ let led, ledRed, ledGreen, ledYellow, lightSensor, button1, button2, buzzer;
 let enteredCode = "";
 let isCodeBeingEntered = false;
 let isLightLow = false;
-let codeEntryTimer = null;
 
 // Démarrer le serveur Express
 app.use(express.static("public"));
@@ -80,32 +76,11 @@ board.on("ready", () => {
   let lastPressTime1 = 0;
   const DEBOUNCE_TIME = 200; // 200 ms
 
-  // Gestion des événements du bouton 2 avec debounce
-  let lastPressTime2 = 0;
-
-  // Gestion du capteur de luminosité
-  lightSensor.on("data", function () {
-    const brightness = this.value;
-    io.emit("lightData", brightness);
-
-    if (brightness < LIGHT_THRESHOLD) {
-      if (!isLightLow && !isCodeBeingEntered) {
-        isLightLow = true;
-        mqttServient.publish("detection", "capteur_caché");
-        startCodeEntry();
-      }
-    } else {
-      if (isLightLow) {
-        isLightLow = false;
-      }
-    }
-  });
   // Scénario
   mqttServient.on("message", (topic, message) => {
     if (topic === "Active_button") {
+      /* *** Activation des boutons *** */
       console.log("Active bouton :", message.toString());
-
-      // Gestion des événements du bouton 1
       button1.on("press", () => {
         const now = Date.now();
         if (now - lastPressTime1 > DEBOUNCE_TIME && isCodeBeingEntered) {
@@ -118,7 +93,9 @@ board.on("ready", () => {
         }
       });
 
-      // Gestion des événements du bouton 2
+      // Gestion des événements du bouton 2 avec debounce
+      let lastPressTime2 = 0;
+
       button2.on("press", () => {
         const now = Date.now();
         if (now - lastPressTime2 > DEBOUNCE_TIME && isCodeBeingEntered) {
@@ -130,48 +107,69 @@ board.on("ready", () => {
           mqttServient.publish("bouton_appuyer", "bouton 2 appuyé");
         }
       });
-    } else if (topic === "code_correct") {
-      console.log("Scénario code correct:", message.toString());
-      if (codeEntryTimer) clearTimeout(codeEntryTimer); // Annuler le timer existant
-      codeEntryTimer = setTimeout(() => {
-        console.log("✅ Code correct !");
-        led.on();
-        ledGreen.on();
+
+      // Gestion du capteur de luminosité
+      lightSensor.on("data", function () {
+        const brightness = this.value;
+        io.emit("lightData", brightness);
+
+        if (brightness < LIGHT_THRESHOLD) {
+          if (!isLightLow && !isCodeBeingEntered) {
+            isLightLow = true;
+            mqttServient.publish("detection", "capteur_caché");
+            startCodeEntry();
+          }
+        } else {
+          if (isLightLow) {
+            isLightLow = false;
+          }
+        }
+      });
+
+      // Fonction pour démarrer la saisie du code
+      function startCodeEntry() {
+        if (isCodeBeingEntered) return;
+        ledYellow.blink(500);
         ledRed.stop().off();
-        ledYellow.stop().off();
-        io.emit("codeResult", { success: true, message: "Code correct !" });
-        buzzer.on();
-        setTimeout(() => {
-          resetState();
-        }, 5000);
-      }, CODE_ENTRY_TIME);
-    } else if (topic === "code_incorrect") {
-      console.log("Scénario code incorrect :", message.toString());
-      if (codeEntryTimer) clearTimeout(codeEntryTimer); // Annuler le timer existant
-      codeEntryTimer = setTimeout(() => {
-        console.log("❌ Code incorrect !");
-        triggerAlarm();
-        io.emit("codeResult", {
-          success: false,
-          message: "Code incorrect !",
-        });
-        setTimeout(() => {
-          resetState();
-        }, 5000);
-      }, CODE_ENTRY_TIME);
+
+        isCodeBeingEntered = true;
+        enteredCode = "";
+        console.log("⏳ Vous avez 10 secondes pour entrer le code.");
+      }
+      /* *** ********************** *** */
+
+      // Traitement de l'activation du bouton
+      if (topic === "code_correct") {
+        console.log("Scénario code correct:", message.toString());
+        const timer = setTimeout(() => {
+          console.log("✅ Code correct !");
+          led.on();
+          ledGreen.on();
+          ledRed.stop().off();
+          ledYellow.stop().off();
+          io.emit("codeResult", { success: true, message: "Code correct !" });
+          buzzer.on();
+          setTimeout(() => {
+            resetState();
+          }, 5000);
+        }, CODE_ENTRY_TIME);
+      }
+      if (topic === "code_incorrect") {
+        //console.log("Scénario code incorrect :", message.toString());
+        const timer = setTimeout(() => {
+          console.log("❌ Code incorrect !");
+          triggerAlarm();
+          io.emit("codeResult", {
+            success: false,
+            message: "Code incorrect !",
+          });
+          setTimeout(() => {
+            resetState();
+          }, 5000);
+        }, CODE_ENTRY_TIME);
+      }
     }
   });
-
-  // Fonction pour démarrer la saisie du code
-  function startCodeEntry() {
-    if (isCodeBeingEntered) return;
-    ledYellow.blink(500);
-    ledRed.stop().off();
-
-    isCodeBeingEntered = true;
-    enteredCode = "";
-    console.log("⏳ Vous avez 10 secondes pour entrer le code.");
-  }
 
   // Gestion de l'alarme
   function triggerAlarm() {

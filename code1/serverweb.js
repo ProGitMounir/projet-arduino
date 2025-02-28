@@ -1,46 +1,37 @@
+const express = require("express");
+const http = require("http");
+const socketIo = require("socket.io");
+
+const app = express();
+const server = http.createServer(app);
+const io = socketIo(server);
+
+// Configuration MQTT
 const mqtt = require("mqtt");
-const client = mqtt.connect("mqtt://localhost");
+const client = mqtt.connect("mqtt://localhost/webserver");
+const mqttServient = mqtt.connect("mqtt://localhost/servient");
 
 // Liste des utilisateurs (à remplacer par une base de données ou un autre stockage persistant)
 const users = [
-  { username: "utilisateur1", code: "1212" },
-  { username: "utilisateur2", code: "2121" },
+  { username: "Ilyass Barkouk", code: "1212" },
+  { username: "Mounir Iya", code: "2121" },
   // Ajoutez d'autres utilisateurs ici
 ];
 
 client.on("connect", () => {
   console.log("Webserver connecté au broker MQTT");
-  client.subscribe("detection", (err) => {
-    if (!err) console.log("Abonné à detection");
-  });
-  client.subscribe("code_entered", (err) => {
-    if (!err) console.log("Abonné à code_entered");
-  });
-  client.subscribe("alarm", (err) => {
-    if (!err) console.log("Abonné à alarm");
-  });
-  client.subscribe("bouton_appuyer", (err) => {
-    if (!err) console.log("Abonné à bouton_appuyer");
+  // Abonnement aux topics
+  client.subscribe("code_to_validate", (err) => {
+    if (!err) console.log("Abonné à code_to_validate");
   });
 });
 
 client.on("message", (topic, message) => {
-  if (topic === "detection") {
-    console.log("Détection :", message.toString());
-    // Mettre à jour l'interface web (par exemple, via Socket.IO)
-  } else if (topic === "code_entered") {
-    console.log("Code entré :", message.toString());
-    // Mettre à jour l'interface web
-    if (message.toString().length === 4) {
-      validateCode(message.toString());
-    }
-  } else if (topic === "alarm") {
-    console.log("Alarme déclenchée :", message.toString());
-    // Mettre à jour l'interface web
-  } /*else if (topic === "bouton_appuyer") {
-    console.log("Bouton appuyé :", message.toString());
-    // Mettre à jour l'interface web
-  }*/
+  if (topic === "code_to_validate") {
+    console.log("Code à valider reçu :", message.toString());
+    // Valider le code
+    validateCode(message.toString());
+  }
 });
 
 function validateCode(enteredCode) {
@@ -48,15 +39,24 @@ function validateCode(enteredCode) {
   for (const user of users) {
     if (user.code === enteredCode) {
       console.log(`Code correct pour ${user.username}`);
-      client.publish("alarm", "code_correct");
+      mqttServient.publish("porte", "code_correct");
       userFound = true;
       break;
     }
   }
   if (!userFound) {
     console.log("Code incorrect");
-    client.publish("alarm", "code_incorrect");
+    mqttServient.publish("alarm", "code_incorrect");
   }
 }
 
-// Ajoutez ici votre code pour l'interface web (par exemple, avec Express et Socket.IO)
+// Servir les fichiers statiques
+app.use(express.static("public"));
+app.get("/", (req, res) => {
+  res.sendFile(__dirname + "/public/index.html");
+});
+
+// Démarrer le serveur
+server.listen(3001, () => {
+  console.log("Webserver démarré sur http://localhost:3001");
+});

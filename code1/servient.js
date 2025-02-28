@@ -1,30 +1,47 @@
+// Configuration MQTT
 const mqtt = require("mqtt");
-const client = mqtt.connect("mqtt://localhost");
+const servient = mqtt.connect("mqtt://localhost/servient");
+const mqttClient = mqtt.connect("mqtt://localhost/webserver");
 
-client.on("connect", () => {
+servient.on("connect", () => {
   console.log("Servient connecté au broker MQTT");
-  client.subscribe("detection", (err) => {
+
+  // Abonnement aux topics
+  servient.subscribe("detection", (err) => {
     if (!err) console.log("Abonné à detection");
   });
-  client.subscribe("code_entered", (err) => {
+  servient.subscribe("code_entered", (err) => {
     if (!err) console.log("Abonné à code_entered");
   });
-  client.subscribe("alarm", (err) => {
-    if (!err) console.log("Abonné à alarm");
+  servient.subscribe("porte", (err) => {
+    if (!err) console.log("Abonné à l'ouverture de porte");
   });
-  client.subscribe("bouton_appuyer", (err) => {
-    if (!err) console.log("Abonné à bouton_appuyer");
+
+  servient.subscribe("alarm", (err) => {
+    if (!err) console.log("Abonné à l'alarme");
   });
 });
 
-client.on("message", (topic, message) => {
+servient.on("message", (topic, message) => {
   if (topic === "detection") {
     console.log("Détection :", message.toString());
+    servient.publish("Active_button", "Activation du bouton");
   } else if (topic === "code_entered") {
-    console.log("Code entré :", message.toString());
+    console.log("Code entré reçu :", message.toString());
+    // Vérifier si le code a une longueur de 4 caractères
+    if (message.toString().length === 4) {
+      console.log(
+        "Code valide (4 caractères), envoi au Webserver pour validation"
+      );
+      mqttClient.publish("code_to_validate", message.toString());
+    } /* else {
+      console.log("Code invalide (longueur != 4), ignoré");
+    }*/
+  } else if (topic === "porte") {
+    console.log("Ouverture de la porte :", message.toString());
+    servient.publish("code_correct", "Ouvrir la porte");
   } else if (topic === "alarm") {
-    console.log("Alarme déclenchée :", message.toString());
-  } else if (topic === "bouton_appuyer") {
-    console.log("Bouton appuyé :", message.toString());
+    console.log("Code incorrect, la porte reste fermée");
+    servient.publish("code_incorrect", "Activation de l'alarme");
   }
 });
