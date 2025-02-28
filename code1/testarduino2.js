@@ -1,4 +1,4 @@
-const { Board, Led, Sensor, Button } = require("johnny-five");
+const { Board, Led, Sensor, Button, Servo } = require("johnny-five");
 
 // Configuration MQTT
 const mqtt = require("mqtt");
@@ -19,6 +19,9 @@ mqttServient.on("connect", () => {
     if (err) console.error("Erreur d'abonnement à code_incorrect :", err);
     else console.log("Abonné au code_incorrect");
   });
+  mqttServient.subscribe("porteClose", (err) => {
+    if (!err) console.log("Abonné à la fermeture de porte");
+  });
 });
 
 // Configuration Express et Socket.IO
@@ -36,17 +39,18 @@ const LED_GREEN_PIN = 2;
 const LED_YELLOW_PIN = 4;
 const LIGHT_SENSOR_PIN = "A0";
 const BUTTON_PIN_1 = "A1";
+const SERVO_PIN = "A2";
 const BUTTON_PIN_2 = "A3"; // Nouveau bouton sur A3
 const LIGHT_THRESHOLD = 200;
-const CODE_ENTRY_TIME = 10000; // 10 secondes
+const CODE_ENTRY_TIME = 1000; // 10 secondes
 const BUZZER_PIN = 9;
-const CORRECT_CODE = "1212"; // Code à valider
 
 const board = new Board();
 
 // Variables d'état
 let led, ledRed, ledGreen, ledYellow, lightSensor, button1, button2, buzzer;
 let enteredCode = "";
+let servo;
 let isCodeBeingEntered = false;
 let isLightLow = false;
 let codeEntryTimer = null;
@@ -75,6 +79,11 @@ board.on("ready", () => {
 
   // Allumer la LED rouge dès le lancement
   ledRed.on();
+
+  servo = new Servo({
+    pin: SERVO_PIN,
+    startAt: 0, // Position initiale (porte fermée)
+  });
 
   // Gestion des événements du bouton 1 avec debounce
   let lastPressTime1 = 0;
@@ -139,9 +148,16 @@ board.on("ready", () => {
         ledGreen.on();
         ledRed.stop().off();
         ledYellow.stop().off();
+        console.log("✅ Servo activé, porte ouverte !");
+        servo.to(90);
+        let a = "ouverte"; // Définir l'état de la porte comme "ouverte"
+        mqttServient.publish("porteStatus", a);
         io.emit("codeResult", { success: true, message: "Code correct !" });
         buzzer.on();
         setTimeout(() => {
+          servo.to(0);
+          a = "fermée"; // Mettre à jour l'état de la porte
+          mqttServient.publish("porteStatus", a);
           resetState();
         }, 5000);
       }, CODE_ENTRY_TIME);
@@ -151,14 +167,63 @@ board.on("ready", () => {
       codeEntryTimer = setTimeout(() => {
         console.log("❌ Code incorrect !");
         triggerAlarm();
+        mqttServient.publish("alarmStatus", "activée");
         io.emit("codeResult", {
           success: false,
           message: "Code incorrect !",
         });
         setTimeout(() => {
           resetState();
+          mqttServient.publish("alarmStatus", "désactivée");
         }, 5000);
       }, CODE_ENTRY_TIME);
+    } else if (topic === "alarm_activate") {
+      console.log("🚨 Activation de l'alarme :", message.toString());
+
+      // Publier l'état de l'alarme comme "activée"
+      mqttServient.publish("alarmStatus", "activée");
+
+      codeEntryTimer = setTimeout(() => {
+        triggerAlarm();
+        setTimeout(() => {
+          resetState();
+        }, 5000);
+      }, CODE_ENTRY_TIME);
+    } else if (topic === "alarm_deactivate") {
+      console.log("🚨 Désactivation de l'alarme :", message.toString());
+
+      //buzzer.stop().off();
+
+      // Publier l'état de l'alarme comme "désactivée"
+      mqttServient.publish("alarmStatus", "désactivée");
+    } else if (topic === "porteOuvert") {
+      console.log("Scénario code correct:", message.toString());
+      if (codeEntryTimer) clearTimeout(codeEntryTimer); // Annuler le timer existant
+      codeEntryTimer = setTimeout(() => {
+        console.log("✅ Code correct !");
+        led.on();
+        ledGreen.on();
+        ledRed.stop().off();
+        ledYellow.stop().off();
+        console.log("✅ Servo activé, porte ouverte !");
+        servo.to(90);
+        let a = "ouverte"; // Définir l'état de la porte comme "ouverte"
+        mqttServient.publish("porteStatus", a);
+        io.emit("codeResult", { success: true, message: "Code correct !" });
+        buzzer.on();
+        setTimeout(() => {
+          servo.to(0);
+          a = "fermée"; // Mettre à jour l'état de la porte
+          mqttServient.publish("porteStatus", a);
+          resetState();
+        }, 5000);
+      }, CODE_ENTRY_TIME);
+    } else if (topic === "porteClose") {
+      console.log("Fermeture de la porte :", message.toString());
+      servo.to(0); // Fermer la porte (position 0)
+      let a = "fermée"; // Mettre à jour l'état de la porte
+      mqttServient.publish("porteStatus", a);
+      io.emit("doorStatus", "closed"); // Mettre à jour l'état de la porte dans l'application web
     }
   });
 
@@ -177,6 +242,8 @@ board.on("ready", () => {
   function triggerAlarm() {
     led.blink(500);
     ledRed.blink(100);
+    ledYellow.stop().off();
+    buzzer.pulse(500);
   }
 
   // Fonction pour réinitialiser l'état

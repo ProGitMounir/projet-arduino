@@ -1,86 +1,298 @@
 <!DOCTYPE html>
+
 <html lang="fr">
+
 <head>
+
   <meta charset="UTF-8">
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Interface Arduino</title>
+
+  <title>Smart Home Control</title>
+
   <style>
+
     body {
-      font-family: Arial, sans-serif;
-      background-color: #f4f4f4;
+
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+
+      display: flex;
+
+      justify-content: center;
+
+      align-items: center;
+
+      height: 100vh;
+
+      background: linear-gradient(135deg, #e0f2f7, #cce0e5);
+
       margin: 0;
-      padding: 20px;
+
     }
-    h1 {
-      color: #333;
-    }
+
     .container {
-      max-width: 600px;
-      margin: 0 auto;
-      background: #fff;
-      padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+
+      background-color: #fff;
+
+      padding: 30px;
+
+      border-radius: 15px;
+
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+
+      text-align: center;
+
+      width: 350px;
+
     }
-    .status {
-      margin-bottom: 20px;
+
+    h1 {
+
+      margin-bottom: 30px;
+
+      color: #34495e;
+
+      font-size: 28px;
+
     }
-    .status p {
-      margin: 5px 0;
+
+    .buttons {
+
+      display: grid;
+
+      grid-template-columns: repeat(2, 1fr);
+
+      gap: 15px;
+
+      margin-bottom: 25px;
+
     }
-    .code-input {
-      margin-top: 20px;
-    }
-    .code-input input {
-      padding: 10px;
+
+    button {
+
+      padding: 15px 25px;
+
       font-size: 16px;
-      width: 100%;
-      box-sizing: border-box;
+
+      border: none;
+
+      border-radius: 8px;
+
+      cursor: pointer;
+
+      transition: transform 0.2s, box-shadow 0.2s;
+
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+
     }
+
+    button:hover {
+
+      transform: translateY(-3px);
+
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+
+    }
+
+    #openDoor {
+
+      background-color: #2ecc71;
+
+      color: white;
+
+    }
+
+    #openDoor:hover {
+
+      background-color: #27ae60;
+
+    }
+
+    #closeDoor {
+
+      background-color: #e74c3c;
+
+      color: white;
+
+    }
+
+    #closeDoor:hover {
+
+      background-color: #c0392b;
+
+    }
+
+    #activateAlarm {
+
+      background-color: #f39c12;
+
+      color: white;
+
+    }
+
+    #activateAlarm:hover {
+
+      background-color: #d35400;
+
+    }
+
+    #deactivateAlarm {
+
+      background-color: #3498db;
+
+      color: white;
+
+    }
+
+    #deactivateAlarm:hover {
+
+      background-color: #2980b9;
+
+    }
+
+    .status {
+
+      font-size: 18px;
+
+      font-weight: 600;
+
+      margin-top: 25px;
+
+      padding: 15px;
+
+      border-radius: 8px;
+
+      background-color: #f0f0f0;
+
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+
+    }
+
+    .door-status.open {
+
+      color: #2ecc71;
+
+    }
+
+    .door-status.closed {
+
+      color: #e74c3c;
+
+    }
+
+    .alarm-status.active {
+
+      color: #e74c3c;
+
+    }
+
+    .alarm-status.inactive {
+
+      color: #3498db;
+
+    }
+
   </style>
+
 </head>
+
 <body>
+
   <div class="container">
-    <h1>Interface Arduino</h1>
-    <div class="status">
-      <p><strong>État du code :</strong> <span id="code-status">En attente...</span></p>
-      <p><strong>Luminosité :</strong> <span id="light-value">0</span></p>
-      <p><strong>Code entré :</strong> <span id="entered-code"></span></p>
+
+    <h1>Smart Home Control</h1>
+
+
+    <div class="buttons">
+
+      <button id="openDoor">Open Door</button>
+
+      <button id="closeDoor">Close Door</button>
+
     </div>
-    <div class="code-input">
-      <input type="text" id="code-input" placeholder="Entrez le code" disabled>
+
+    <div id="doorStatus" class="status door-status">Door Status: Closed</div>
+
+
+    <div class="buttons">
+
+      <button id="activateAlarm">Activate Alarm</button>
+
+      <button id="deactivateAlarm">Deactivate Alarm</button>
+
     </div>
+
+    <div id="alarmStatus" class="status alarm-status">Alarm Status: Inactive</div>
+
   </div>
 
+
   <script src="/socket.io/socket.io.js"></script>
+
   <script>
-    // Connexion au serveur Socket.IO
+
     const socket = io();
 
-    // Écouter les événements du serveur
-    socket.on("buttonPress", (code) => {
-      document.getElementById("entered-code").textContent = code;
+    const openDoorButton = document.getElementById("openDoor");
+
+    const closeDoorButton = document.getElementById("closeDoor");
+
+    const activateAlarmButton = document.getElementById("activateAlarm");
+
+    const deactivateAlarmButton = document.getElementById("deactivateAlarm");
+
+    const doorStatusElement = document.getElementById("doorStatus");
+
+    const alarmStatusElement = document.getElementById("alarmStatus");
+
+
+    openDoorButton.addEventListener("click", () => {
+
+      socket.emit("doorCommand", "open");
+
     });
 
-    socket.on("lightData", (brightness) => {
-      document.getElementById("light-value").textContent = brightness;
+
+    closeDoorButton.addEventListener("click", () => {
+
+      socket.emit("doorCommand", "close");
+
     });
 
-    socket.on("codeResult", (data) => {
-      const codeStatus = document.getElementById("code-status");
-      if (data.success) {
-        codeStatus.textContent = "✅ Code correct !";
-        codeStatus.style.color = "green";
-      } else {
-        codeStatus.textContent = "❌ Code incorrect !";
-        codeStatus.style.color = "red";
-      }
+
+    activateAlarmButton.addEventListener("click", () => {
+
+      socket.emit("alarmCommand", "activate");
+
     });
 
-    socket.on("ledState", (isOn) => {
-      const codeInput = document.getElementById("code-input");
-      codeInput.disabled = !isOn;
+
+    deactivateAlarmButton.addEventListener("click", () => {
+
+      socket.emit("alarmCommand", "deactivate");
+
     });
+
+
+    socket.on("doorStatus", (status) => {
+
+      doorStatusElement.textContent = `Door Status: ${status === "open" ? "Open" : "Closed"}`;
+
+      doorStatusElement.className = `status door-status ${status}`;
+
+    });
+
+
+    socket.on("alarmStatus", (status) => {
+
+      alarmStatusElement.textContent = `Alarm Status: ${status === "active" ? "Active" : "Inactive"}`;
+
+      alarmStatusElement.className = `status alarm-status ${status}`;
+
+    });
+
   </script>
+
 </body>
-</html>
+
+</html> 
