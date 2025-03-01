@@ -38,4 +38,4 @@ public/index.html : Interface utilisateur pour le contrôle à distance.
 
 #### 👤 MOUNIR IYA AMINE📧 Contact : pro.mailmounir@gmail.com || mounir.iyaamine@etud.iga.ac.ma
 
-##### 📢 Remarque : Pour toute question ou suggestion, n'hésitez pas à nous contacter !" ajoute des # devant les titres cles
+##### 📢 Remarque : Pour toute question ou suggestion, n'hésitez pas à nous contacter !
